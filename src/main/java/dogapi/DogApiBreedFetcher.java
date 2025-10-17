@@ -19,18 +19,20 @@ public class DogApiBreedFetcher implements BreedFetcher {
 
     /**
      * Fetch the list of sub breeds for the given breed from the dog ceo API.
+     *
      * @param breed the breed to fetch sub breeds for
      * @return list of sub breeds for the given breed
      * @throws BreedNotFoundException if the breed does not exist (or if the API call fails for any reason)
      */
     @Override
-    public List<String> getSubBreeds(String breed) {
+    public List<String> getSubBreeds(String breed) throws BreedNotFoundException {
         // TODO Task 1: Complete this method based on its provided documentation
         //      and the documentation for the dog.ceo API. You may find it helpful
         //      to refer to the examples of using OkHttpClient from the last lab,
         //      as well as the code for parsing JSON responses.
         // return statement included so that the starter code can compile and run.
         String b = Objects.requireNonNull(breed, "breed").toLowerCase(Locale.ROOT);
+
         okhttp3.HttpUrl url = okhttp3.HttpUrl.get("https://dog.ceo/api")
                 .newBuilder()
                 .addPathSegment("breed")
@@ -46,19 +48,18 @@ public class DogApiBreedFetcher implements BreedFetcher {
 
         try (Response resp = client.newCall(req).execute()) {
             if (!resp.isSuccessful() || resp.body() == null)
-                throw new BreedFetcher.BreedNotFoundException(b);
+                throw new BreedNotFoundException(b);
 
             JSONObject json = new JSONObject(resp.body().string());
             if (!"success".equalsIgnoreCase(json.optString("status")))
-                throw new BreedFetcher.BreedNotFoundException(b);
+                throw new BreedNotFoundException(b);
 
             JSONArray arr = json.getJSONArray("message");
             List<String> out = new ArrayList<>(arr.length());
             for (int i = 0; i < arr.length(); i++) out.add(arr.getString(i));
             return out; // may be empty
-        } catch (Exception e) {
-            throw new BreedFetcher.BreedNotFoundException(b);
+        } catch (Exception e) { // includes IOException/JSON errors
+            throw new BreedNotFoundException(b);
         }
     }
-
 }
