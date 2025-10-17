@@ -10,7 +10,7 @@ import java.io.IOException;
 import java.util.*;
 
 /**
- * BreedFetcher implementation that relies on the dog.ceo API.
+ * BreedFetcher implementation that relies on the dog ceo API.
  * Note that all failures get reported as BreedNotFoundException
  * exceptions to align with the requirements of the BreedFetcher interface.
  */
@@ -18,7 +18,7 @@ public class DogApiBreedFetcher implements BreedFetcher {
     private final OkHttpClient client = new OkHttpClient();
 
     /**
-     * Fetch the list of sub breeds for the given breed from the dog.ceo API.
+     * Fetch the list of sub breeds for the given breed from the dog ceo API.
      * @param breed the breed to fetch sub breeds for
      * @return list of sub breeds for the given breed
      * @throws BreedNotFoundException if the breed does not exist (or if the API call fails for any reason)
@@ -30,6 +30,35 @@ public class DogApiBreedFetcher implements BreedFetcher {
         //      to refer to the examples of using OkHttpClient from the last lab,
         //      as well as the code for parsing JSON responses.
         // return statement included so that the starter code can compile and run.
-        return new ArrayList<>();
+        String b = Objects.requireNonNull(breed, "breed").toLowerCase(Locale.ROOT);
+        okhttp3.HttpUrl url = okhttp3.HttpUrl.get("https://dog.ceo/api")
+                .newBuilder()
+                .addPathSegment("breed")
+                .addPathSegment(b)
+                .addPathSegment("list")
+                .build();
+
+        Request req = new Request.Builder()
+                .url(url)
+                .get()
+                .header("Accept", "application/json")
+                .build();
+
+        try (Response resp = client.newCall(req).execute()) {
+            if (!resp.isSuccessful() || resp.body() == null)
+                throw new BreedFetcher.BreedNotFoundException(b);
+
+            JSONObject json = new JSONObject(resp.body().string());
+            if (!"success".equalsIgnoreCase(json.optString("status")))
+                throw new BreedFetcher.BreedNotFoundException(b);
+
+            JSONArray arr = json.getJSONArray("message");
+            List<String> out = new ArrayList<>(arr.length());
+            for (int i = 0; i < arr.length(); i++) out.add(arr.getString(i));
+            return out; // may be empty
+        } catch (Exception e) {
+            throw new BreedFetcher.BreedNotFoundException(b);
+        }
     }
+
 }
